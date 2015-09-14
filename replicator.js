@@ -3,6 +3,7 @@
     var properties = [
       {type: 'range', id: 'Columns', value: 2, min: 1, max: 10, step: 1},
       {type: 'range', id: 'Rows', value: 2, min: 1, max: 10, step: 1},
+      {type: 'range', id: 'Spacing (in)', value: 0.5, min: 0, max: 1, step: 0.001},
     ];
 
     // flip a point vertically to the SVG coordinate system where +Y is down
@@ -43,6 +44,7 @@
       var params = args[0];
       var columnCount = params['Columns'];
       var rowCount = params['Rows'];
+      var spacing = params['Spacing (in)'];
       var shapeProperties = args[1];
       var shapeWidth = shapeProperties.right - shapeProperties.left;
       var shapeHeight = shapeProperties.top - shapeProperties.bottom;
@@ -50,15 +52,15 @@
       var resultPointArrays = [];
       for (var y = 0; y < rowCount; y++) {
         for (var x = 0; x < columnCount; x++) {
-          resultPointArrays.push(offsetPointArrays(pointArrays, x * shapeWidth, y * shapeHeight));
+          resultPointArrays.push(offsetPointArrays(pointArrays, x * (shapeWidth + spacing), y * (shapeHeight + spacing)));
         }
       }
-      var svgWidth = columnCount * shapeWidth * 96;
-      var svgHeight = rowCount * shapeHeight * 96;
-      var viewBox = [0, 0, columnCount * shapeWidth, rowCount * shapeHeight].join(' ');
+      var width = columnCount * shapeWidth + (columnCount - 1) * spacing;
+      var height = rowCount * shapeHeight + (rowCount - 1) * spacing;
+      var viewBox = [0, 0, width, height].join(' ');
       var svg = [
         '<?xml version="1.0" standalone="no"?>',
-        '<svg xmlns="http://www.w3.org/2000/svg" version="1.0" width="' + svgWidth + '" height="' + svgHeight + '" viewBox="' + viewBox + '">',
+        '<svg xmlns="http://www.w3.org/2000/svg" version="1.0" width="' + width + 'in" height="' + height + 'in" viewBox="' + viewBox + '">',
         resultPointArrays.map(pathSvgForPointArrays).join(''),
         '</svg>'
       ].join('');
