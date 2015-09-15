@@ -7,13 +7,15 @@ var properties = [
 ];
 
 // flip a point vertically to the SVG coordinate system where +Y is down
-var flipPointY = function(point) {
-  return [point[0], -point[1]];
+var convertPointToSvgCoordinates = function(point, height) {
+  return [point[0], height - point[1]];
 };
 
-var flipPointArraysY = function(pointArrays) {
+var convertPointArraysToSvgCoordinates = function(pointArrays, height) {
   return pointArrays.map(function(pointArray) {
-    return pointArray.map(flipPointY);
+    return pointArray.map(function(point) {
+      return convertPointToSvgCoordinates(point, height);
+    });
   });
 };
 
@@ -48,7 +50,7 @@ var executor = function(args, success, failure) {
   var shapeProperties = args[1];
   var shapeWidth = shapeProperties.right - shapeProperties.left;
   var shapeHeight = shapeProperties.top - shapeProperties.bottom;
-  var pointArrays = flipPointArraysY(offsetPointArrays(shapeProperties.pointArrays, -shapeProperties.left, -shapeProperties.top));
+  var pointArrays = offsetPointArrays(shapeProperties.pointArrays, -shapeProperties.left, -shapeProperties.bottom);
   var resultPointArrays = [];
   for (var y = 0; y < rowCount; y++) {
     for (var x = 0; x < columnCount; x++) {
@@ -58,6 +60,9 @@ var executor = function(args, success, failure) {
   var width = columnCount * shapeWidth + (columnCount - 1) * spacing;
   var height = rowCount * shapeHeight + (rowCount - 1) * spacing;
   var viewBox = [0, 0, width, height].join(' ');
+  resultPointArrays = resultPointArrays.map(function(pointArrays) {
+    return convertPointArraysToSvgCoordinates(pointArrays, height);
+  });
   var svg = [
     '<?xml version="1.0" standalone="no"?>',
     '<svg xmlns="http://www.w3.org/2000/svg" version="1.0" width="' + width + 'in" height="' + height + 'in" viewBox="' + viewBox + '">',
