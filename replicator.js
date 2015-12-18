@@ -1,5 +1,5 @@
-// Define a properties array that returns array of objects representing
-// the accepted properties for your application
+// Define an array named `properties` with objects representing
+// the user-adjustable inputs to your application
 var properties = [
   {type: 'range', id: 'Columns', value: 2, min: 1, max: 10, step: 1},
   {type: 'range', id: 'Rows', value: 2, min: 1, max: 10, step: 1},
@@ -39,7 +39,7 @@ var pathSvgForPointArrays = function(pointArrays) {
   return '<path d="' + pointArrays.map(pathSvgDataForPointArray).join(' ') + '" />';
 };
 
-// Define an executor function that generates a valid SVG document string,
+// Define a function named `executor` that generates a valid SVG document string
 // and passes it to the provided success callback, or invokes the failure
 // callback if unable to do so
 var executor = function(args, success, failure) {
@@ -47,7 +47,7 @@ var executor = function(args, success, failure) {
   var columnCount = params['Columns'];
   var rowCount = params['Rows'];
   var spacing = params['Spacing (in)'];
-  var shapeProperties = args[1];
+  var shapeProperties = args[1]; // NOTE: This requires checking "Requires selected shape" on the Edit App page
   var shapeWidth = shapeProperties.right - shapeProperties.left;
   var shapeHeight = shapeProperties.top - shapeProperties.bottom;
   var pointArrays = offsetPointArrays(shapeProperties.pointArrays, -shapeProperties.left, -shapeProperties.bottom);
