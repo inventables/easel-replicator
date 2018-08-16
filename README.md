@@ -1,3 +1,3 @@
 # easel-replicator
 Source of the Easel “Replicator” app
-Uses Easel API Version 1.0
+Uses Easel API Version 2.0

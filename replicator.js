@@ -6,69 +6,64 @@ var properties = [
   {type: 'range', id: 'Spacing (in)', value: 0.5, min: 0, max: 1, step: 0.001},
 ];
 
-// flip a point vertically to the SVG coordinate system where +Y is down
-var convertPointToSvgCoordinates = function(point, height) {
-  return [point[0], height - point[1]];
+var shallowCopy = function(object) {
+  var result = {};
+  for (var nextKey in object) {
+    if (object.hasOwnProperty(nextKey)) {
+      result[nextKey] = object[nextKey];
+    }
+  }
+
+  return result;
 };
 
-var convertPointArraysToSvgCoordinates = function(pointArrays, height) {
-  return pointArrays.map(function(pointArray) {
-    return pointArray.map(function(point) {
-      return convertPointToSvgCoordinates(point, height);
-    });
-  });
-};
+var offsetVolume = function(volume, spacing, x, y) {
+  var newVolume = shallowCopy(volume);
+  var width = volume.shape.width || 0;
+  var height = volume.shape.height || 0;
 
-var offsetPoint = function(point, dx, dy) {
-  return [point[0] + dx, point[1] + dy];
-};
+  newVolume.id = null;
+  newVolume.shape = shallowCopy(volume.shape);
+  newVolume.shape.rotation = newVolume.shape.rotation || 0
+  newVolume.shape.flipping = newVolume.shape.flipping || {}
+  newVolume.shape.center = {
+    x: volume.shape.center.x + (height + spacing) * x,
+    y: volume.shape.center.y + (width + spacing) * y
+  };
 
-var offsetPointArrays = function(pointArrays, dx, dy) {
-  return pointArrays.map(function(pointArray) {
-    return pointArray.map(function(point) {
-      return offsetPoint(point, dx, dy);
-    });
-  });
-};
+  return newVolume;
+}
 
-var pathSvgDataForPointArray = function(pointArray) {
-  return 'M' + pointArray.map(function(point) { return point[0] + ',' + point[1]; }).join(' ');
-};
-
-var pathSvgForPointArrays = function(pointArrays) {
-  return '<path d="' + pointArrays.map(pathSvgDataForPointArray).join(' ') + '" />';
-};
+var getVolumeById = function(volumes, id) {
+  for (var i = 0; i < volumes.length; i++) {
+    if (volumes[i].id === id) {
+      return volumes[i]
+    }
+  }
+}
 
 // Define a function named `executor` that generates a valid SVG document string
 // and passes it to the provided success callback, or invokes the failure
 // callback if unable to do so
 var executor = function(args, success, failure) {
-  var params = args[0];
+  var params = args.params;
   var columnCount = params['Columns'];
   var rowCount = params['Rows'];
   var spacing = params['Spacing (in)'];
-  var shapeProperties = args[1]; // NOTE: This requires checking "Requires selected shape" on the Edit App page
-  var shapeWidth = shapeProperties.right - shapeProperties.left;
-  var shapeHeight = shapeProperties.top - shapeProperties.bottom;
-  var pointArrays = offsetPointArrays(shapeProperties.pointArrays, -shapeProperties.left, -shapeProperties.bottom);
-  var resultPointArrays = [];
+
+  var selectedVolumeIds = args.selectedVolumeIds || []
+
+  if (selectedVolumeIds.length != 1) {
+    failure('A single volume must be selected!');
+    return;
+  }
+
+  var selectedVolume = getVolumeById(args.volumes, selectedVolumeIds[0]);
+  var newVolumes = [];
   for (var y = 0; y < rowCount; y++) {
     for (var x = 0; x < columnCount; x++) {
-      resultPointArrays.push(offsetPointArrays(pointArrays, x * (shapeWidth + spacing), y * (shapeHeight + spacing)));
+      newVolumes.push(offsetVolume(selectedVolume, spacing, x, y))
     }
   }
-  var width = columnCount * shapeWidth + (columnCount - 1) * spacing;
-  var height = rowCount * shapeHeight + (rowCount - 1) * spacing;
-  var viewBox = [0, 0, width, height].join(' ');
-  resultPointArrays = resultPointArrays.map(function(pointArrays) {
-    return convertPointArraysToSvgCoordinates(pointArrays, height);
-  });
-  var svg = [
-    '<?xml version="1.0" standalone="no"?>',
-    '<svg xmlns="http://www.w3.org/2000/svg" version="1.0" width="' + width + 'in" height="' + height + 'in" viewBox="' + viewBox + '">',
-    resultPointArrays.map(pathSvgForPointArrays).join(''),
-    '</svg>'
-  ].join('');
-
-  success(svg);
+  success(newVolumes);
 };
