@@ -17,6 +17,29 @@ var shallowCopy = function(object) {
   return result;
 };
 
+var offsetLineShape = function(shape, dx, dy) {
+  shape.point1 = {
+    x: shape.point1.x + dx,
+    y: shape.point1.y + dy
+  }
+
+  shape.point2 = {
+    x: shape.point2.x + dx,
+    y: shape.point2.y + dy
+  }
+
+  return shape;
+}
+
+var offsetAnyShapeThatIsNotALine = function(shape, dx, dy) {
+  shape.center = {
+    x: shape.center.x + dx,
+    y: shape.center.y + dy
+  };
+
+  return shape;
+}
+
 var offsetVolume = function(volume, spacing, x, y) {
   var newVolume = shallowCopy(volume);
   var width = volume.shape.width || 0;
@@ -24,12 +47,24 @@ var offsetVolume = function(volume, spacing, x, y) {
 
   newVolume.id = null;
   newVolume.shape = shallowCopy(volume.shape);
-  newVolume.shape.rotation = newVolume.shape.rotation || 0
-  newVolume.shape.flipping = newVolume.shape.flipping || {}
-  newVolume.shape.center = {
-    x: volume.shape.center.x + (height + spacing) * x,
-    y: volume.shape.center.y + (width + spacing) * y
-  };
+
+  if (newVolume.shape.tpye === 'line') {
+    newVolume.shape.rotation = null
+  } else {
+    newVolume.shape.rotation = newVolume.shape.rotation
+  }
+
+  newVolume.shape.rotation = newVolume.shape.rotation
+  newVolume.shape.flipping = newVolume.shape.flipping
+
+  var dx = (height + spacing) * x,
+      dy = (width + spacing) * y
+
+  if (newVolume.shape.type === 'line') {
+    newVolume.shape = offsetLineShape(newVolume.shape, dx, dy)
+  } else {
+    newVolume.shape = offsetAnyShapeThatIsNotALine(newVolume.shape, dx, dy)
+  }
 
   return newVolume;
 }
