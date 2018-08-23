@@ -48,14 +48,11 @@ var offsetVolume = function(volume, spacing, x, y) {
   newVolume.id = null;
   newVolume.shape = shallowCopy(volume.shape);
 
-  if (newVolume.shape.tpye === 'line') {
+  if (newVolume.shape.type === 'line') {
     newVolume.shape.rotation = null
   } else {
-    newVolume.shape.rotation = newVolume.shape.rotation
+    newVolume.shape.rotation = newVolume.shape.rotation || 0
   }
-
-  newVolume.shape.rotation = newVolume.shape.rotation
-  newVolume.shape.flipping = newVolume.shape.flipping
 
   var dx = (height + spacing) * x,
       dy = (width + spacing) * y
@@ -89,7 +86,7 @@ var executor = function(args, success, failure) {
   var selectedVolumeIds = args.selectedVolumeIds || []
 
   if (selectedVolumeIds.length != 1) {
-    failure('A single volume must be selected!');
+    failure('A single shape must be selected!');
     return;
   }
 
