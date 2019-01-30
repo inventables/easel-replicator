@@ -1,101 +1,203 @@
-// Define an array named `properties` with objects representing
-// the user-adjustable inputs to your application
-var properties = [
-  {type: 'range', id: 'Columns', value: 2, min: 1, max: 10, step: 1},
-  {type: 'range', id: 'Rows', value: 2, min: 1, max: 10, step: 1},
-  {type: 'range', id: 'Spacing (in)', value: 0.5, min: 0, max: 1, step: 0.001},
-];
+var COLUMNS = "Columns";
+var ROWS = "Rows";
+var CENTERS = "Use center distance";
+var SPACING;
 
-var shallowCopy = function(object) {
+function properties(args) {
+  SPACING = `Spacing (${args.preferredUnit})`;
+
+  return [
+    {
+      type: "range",
+      id: COLUMNS,
+      value: 2,
+      min: 1,
+      max: 10,
+      step: 1
+    },
+    {
+      type: "range",
+      id: ROWS,
+      value: 2,
+      min: 1,
+      max: 10,
+      step: 1
+    },
+    {
+      type: "range",
+      id: SPACING,
+      value: 0.5,
+      min: 0,
+      max: 1,
+      step: 0.001
+    },
+    {
+      type: "boolean",
+      id: CENTERS,
+      value: false
+    }
+  ];
+}
+
+function shallowCopy(object) {
   var result = {};
-  for (var nextKey in object) {
-    if (object.hasOwnProperty(nextKey)) {
-      result[nextKey] = object[nextKey];
+  for (var key in object) {
+    if (object.hasOwnProperty(key)) {
+      result[key] = object[key];
     }
   }
 
   return result;
-};
+}
 
-var offsetLineShape = function(shape, dx, dy) {
-  shape.point1 = {
+function offsetLine(shape, dx, dy) {
+  var newShape = shallowCopy(shape);
+
+  newShape.point1 = {
     x: shape.point1.x + dx,
     y: shape.point1.y + dy
   }
 
-  shape.point2 = {
+  newShape.point2 = {
     x: shape.point2.x + dx,
     y: shape.point2.y + dy
   }
 
-  return shape;
+  return newShape;
 }
 
-var offsetAnyShapeThatIsNotALine = function(shape, dx, dy) {
-  shape.center = {
+function offsetCenteredShape(shape, dx, dy) {
+  var newShape = shallowCopy(shape);
+
+  newShape.center = {
     x: shape.center.x + dx,
     y: shape.center.y + dy
   };
 
-  return shape;
+  return newShape;
 }
 
-var offsetVolume = function(volume, spacing, x, y) {
-  var newVolume = shallowCopy(volume);
-  var width = volume.shape.width || 0;
-  var height = volume.shape.height || 0;
+function offsetShape(shape, dx, dy) {
+  switch (shape.type) {
+    case "line":
+      return offsetLine(shape, dx, dy);
 
-  newVolume.id = null;
-  newVolume.shape = shallowCopy(volume.shape);
-
-  if (newVolume.shape.type === 'line') {
-    newVolume.shape.rotation = null
-  } else {
-    newVolume.shape.rotation = newVolume.shape.rotation || 0
+    default:
+      return offsetCenteredShape(shape, dx, dy);
   }
-
-  var dx = (height + spacing) * x,
-      dy = (width + spacing) * y
-
-  if (newVolume.shape.type === 'line') {
-    newVolume.shape = offsetLineShape(newVolume.shape, dx, dy)
-  } else {
-    newVolume.shape = offsetAnyShapeThatIsNotALine(newVolume.shape, dx, dy)
-  }
-
-  return newVolume;
 }
 
-var getVolumeById = function(volumes, id) {
+function getVolumesByIds(volumes, ids) {
+  var selectedVolumes = [];
+
   for (var i = 0; i < volumes.length; i++) {
-    if (volumes[i].id === id) {
-      return volumes[i]
+    var volume = volumes[i];
+
+    for (var j = 0; j < ids.length; j++) {
+      if (volume.id === ids[j]) {
+        selectedVolumes.push(volume);
+      }
     }
   }
+
+  return selectedVolumes;
 }
 
-// Define a function named `executor` that generates a valid SVG document string
-// and passes it to the provided success callback, or invokes the failure
-// callback if unable to do so
-var executor = function(args, success, failure) {
-  var params = args.params;
-  var columnCount = params['Columns'];
-  var rowCount = params['Rows'];
-  var spacing = params['Spacing (in)'];
+function getVolumeBounds(volume) {
+  switch (volume.shape.type) {
+    case "line":
+      return {
+        x1: Math.min(volume.shape.point1.x, volume.shape.point2.x),
+        x2: Math.max(volume.shape.point1.x, volume.shape.point2.x),
+        y1: Math.min(volume.shape.point1.y, volume.shape.point2.y),
+        y2: Math.max(volume.shape.point1.y, volume.shape.point2.y)
+      };
+
+    default:
+      return {
+        x1: volume.shape.center.x - (volume.shape.width / 2),
+        x2: volume.shape.center.x + (volume.shape.width / 2),
+        y1: volume.shape.center.y - (volume.shape.height / 2),
+        y2: volume.shape.center.y + (volume.shape.height / 2)
+      };
+  }
+}
+
+function calculateBounds(volumes) {
+  var bounds = getVolumeBounds(volumes[0]);
+
+  for (var i = 1; i < volumes.length; i++) {
+    var volumeBounds = getVolumeBounds(volumes[i]);
+
+    bounds.x1 = Math.min(bounds.x1, volumeBounds.x1);
+    bounds.x2 = Math.max(bounds.x2, volumeBounds.x2);
+    bounds.y1 = Math.min(bounds.y1, volumeBounds.y1);
+    bounds.y2 = Math.max(bounds.y2, volumeBounds.y2);
+  }
+
+  return bounds;
+}
+
+function calculateGap(bounds, spacing, useCenters, unit) {
+  var unitDivisor = unit === "mm"
+    ? 25.4
+    : 1.0;
+
+  var gap = {
+    x: spacing / unitDivisor,
+    y: spacing / unitDivisor
+  };
+
+  if (!useCenters) {
+    gap.x += bounds.x2 - bounds.x1;
+    gap.y += bounds.y2 - bounds.y1;
+  }
+
+  return gap;
+}
+
+function executor(args, success, failure) {
+  var columnCount = args.params[COLUMNS];
+  var rowCount = args.params[ROWS];
+  var spacing = args.params[SPACING];
+  var useCenters = args.params[CENTERS];
 
   var selectedVolumeIds = args.selectedVolumeIds || []
 
-  if (selectedVolumeIds.length != 1) {
-    failure('A single shape must be selected!');
+  if (selectedVolumeIds.length === 0) {
+    failure("Select one or more shapes to replicate.");
     return;
   }
 
-  var selectedVolume = getVolumeById(args.volumes, selectedVolumeIds[0]);
+  var selectedVolumes = getVolumesByIds(args.volumes, selectedVolumeIds);
+  var bounds = calculateBounds(selectedVolumes);
+  var gap = calculateGap(bounds, spacing, useCenters, args.preferredUnit);
+
   var newVolumes = [];
-  for (var y = 0; y < rowCount; y++) {
-    for (var x = 0; x < columnCount; x++) {
-      newVolumes.push(offsetVolume(selectedVolume, spacing, x, y))
+
+  for (var i = 0; i < selectedVolumes.length; i++) {
+    var volume = selectedVolumes[i];
+
+    for (var row = 0; row < rowCount; row++) {
+      for (var col = 0; col < columnCount; col++) {
+        var dx = gap.x * col;
+        var dy = gap.y * row;
+
+        var newVolume = shallowCopy(volume);
+
+        // Setting the volume id to null will cause a new volume to be created
+        newVolume.id = null;
+        newVolume.shape = offsetShape(volume.shape, dx, dy);
+
+        // Force a replacement of the original, so we don't end up with a double of it.
+        if (row === 0 && col === 0) {
+          newVolume.id = volume.id;
+        }
+
+        newVolumes.push(newVolume);
+      }
     }
   }
+
   success(newVolumes);
-};
+}
