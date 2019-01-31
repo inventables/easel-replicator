@@ -113,6 +113,14 @@ function getVolumeBounds(volume) {
         y2: Math.max(volume.shape.point1.y, volume.shape.point2.y)
       };
 
+    case "drill":
+      return {
+        x1: volume.shape.center.x,
+        x2: volume.shape.center.x,
+        y1: volume.shape.center.y,
+        y2: volume.shape.center.y
+      };
+
     default:
       return {
         x1: volume.shape.center.x - (volume.shape.width / 2),
@@ -127,6 +135,7 @@ function calculateBounds(volumes) {
   var bounds = getVolumeBounds(volumes[0]);
 
   for (var i = 1; i < volumes.length; i++) {
+    var volume = volumes[i];
     var volumeBounds = getVolumeBounds(volumes[i]);
 
     bounds.x1 = Math.min(bounds.x1, volumeBounds.x1);
@@ -170,6 +179,7 @@ function executor(args, success, failure) {
   }
 
   var selectedVolumes = getVolumesByIds(args.volumes, selectedVolumeIds);
+
   var bounds = calculateBounds(selectedVolumes);
   var gap = calculateGap(bounds, spacing, useCenters, args.preferredUnit);
 
