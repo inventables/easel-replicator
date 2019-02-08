@@ -6,6 +6,8 @@ var SPACING;
 function properties(args) {
   SPACING = `Spacing (${args.preferredUnit})`;
 
+  var isMetric = args.preferredUnit === "mm";
+
   return [
     {
       type: "range",
@@ -24,12 +26,11 @@ function properties(args) {
       step: 1
     },
     {
-      type: "range",
+      type: "text",
       id: SPACING,
-      value: 0.5,
-      min: 0,
-      max: 1,
-      step: 0.001
+      value: isMetric
+        ? 10
+        : 0.5,
     },
     {
       type: "boolean",
@@ -93,10 +94,8 @@ function getVolumesByIds(volumes, ids) {
   for (var i = 0; i < volumes.length; i++) {
     var volume = volumes[i];
 
-    for (var j = 0; j < ids.length; j++) {
-      if (volume.id === ids[j]) {
-        selectedVolumes.push(volume);
-      }
+    if (ids.indexOf(volume.id) >= 0) {
+      selectedVolumes.push(volume);
     }
   }
 
@@ -168,7 +167,7 @@ function calculateGap(bounds, spacing, useCenters, unit) {
 function executor(args, success, failure) {
   var columnCount = args.params[COLUMNS];
   var rowCount = args.params[ROWS];
-  var spacing = args.params[SPACING];
+  var spacing = Number(args.params[SPACING]);
   var useCenters = args.params[CENTERS];
 
   var selectedVolumeIds = args.selectedVolumeIds || []
