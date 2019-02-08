@@ -170,6 +170,11 @@ function executor(args, success, failure) {
   var spacing = Number(args.params[SPACING]);
   var useCenters = args.params[CENTERS];
 
+  if (!isFinite(spacing)) {
+    failure("Spacing must be a number.");
+    return;
+  }
+
   var selectedVolumeIds = args.selectedVolumeIds || []
 
   if (selectedVolumeIds.length === 0) {
