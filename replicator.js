@@ -88,6 +88,23 @@ function offsetShape(shape, dx, dy) {
   }
 }
 
+function offsetCut(cut, dx, dy) {
+  var newCut = shallowCopy(cut);
+
+  if (cut.tabs) {
+    newCut.tabs = cut.tabs.map(function(tab) {
+      var newTab = shallowCopy(tab);
+      newTab.center = {
+        x: newTab.center.x + dx,
+        y: newTab.center.y + dy,
+      };
+      return newTab;
+    });
+  }
+
+  return newCut;
+}
+
 function getVolumesByIds(volumes, ids) {
   var selectedVolumes = [];
 
@@ -197,16 +214,15 @@ function executor(args, success, failure) {
         var dx = gap.x * col;
         var dy = gap.y * row;
 
-        var newVolume = shallowCopy(volume);
+        // Giving the original volume's id will replace it, so we don't end up with a double of it.
+        // For other rows & columns, setting the volume id to null will cause a new volume to be created.
+        var newId = (row === 0 && col === 0) ? volume.id : null;
 
-        // Setting the volume id to null will cause a new volume to be created
-        newVolume.id = null;
-        newVolume.shape = offsetShape(volume.shape, dx, dy);
-
-        // Force a replacement of the original, so we don't end up with a double of it.
-        if (row === 0 && col === 0) {
-          newVolume.id = volume.id;
-        }
+        var newVolume = {
+          id: newId,
+          shape: offsetShape(volume.shape, dx, dy),
+          cut: offsetCut(volume.cut, dx, dy),
+        };
 
         newVolumes.push(newVolume);
       }
